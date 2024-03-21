@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">Taller2CompuMovil</string>
+    <string name="action_settings">Settings</string>
+    <!-- Strings used for fragments for navigation -->
+    <string name="first_fragment_label">First Fragment</string>
+    <string name="second_fragment_label">Second Fragment</string>
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+    <string name="map">Map</string>
+    <string name="camera">Camera</string>
+    <string name="take">TAKE</string>
+    <string name="video">Video</string>
+    <string name="pick_from_gallery">PICK FROM GALLERY</string>
+    <string name="mapaTaller2">51f1a95da070286e</string>
+    <string name="title_activity_map">map_activity</string>
+    <string name="cerrar">Cerrar</string>
+</resources>
