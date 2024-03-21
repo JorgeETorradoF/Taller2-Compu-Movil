@@ -1,2 +1,2 @@
 # Taller2-Compu-Movil
-## Pequeña app con opciones de cargar foto/video o tomarlas y el 2do botón debe mostrar un mapa con polyline
+## Little app with 2 options: load photo/video or take it and the 2nd one is a map
