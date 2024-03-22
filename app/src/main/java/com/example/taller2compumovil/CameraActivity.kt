@@ -5,10 +5,12 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.Manifest
+import android.os.Build
 import android.provider.MediaStore
 import android.widget.ImageView
 import android.widget.VideoView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.taller2compumovil.databinding.CameraActivityBinding
 
@@ -19,8 +21,10 @@ class CameraActivity : AppCompatActivity() {
     private val REQUEST_IMAGE_CAPTURE = 1
     private val REQUEST_VIDEO_CAPTURE = 2
     private val PERM_CAMERA_CODE = 101
-    private val PERM_GALERY_GROUP_CODE = 102
-    private val REQUEST_PICK = 3
+    private val PERM_GALLERY_PICTURES = 102
+    private val PERM_GALLERY_VIDEOS = 103
+    private val REQUEST_PICTURE_FROM_GALLERY = 3
+    private val REQUEST_VIDEO_FROM_GALLERY = 4
     private val alerts = Alerts(this)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -78,35 +82,38 @@ class CameraActivity : AppCompatActivity() {
 
         galleryButton.setOnClickListener {
             var canAccessGallery = false
-            when {
-                ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.READ_EXTERNAL_STORAGE
-                ) == PackageManager.PERMISSION_GRANTED -> {
-                    canAccessGallery = true
-                }
+            val isVideo = videoSwitch.isChecked
+            var galleryPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                Manifest.permission.READ_MEDIA_IMAGES
+            else
+                Manifest.permission.READ_EXTERNAL_STORAGE
 
-                shouldShowRequestPermissionRationale(Manifest.permission.READ_EXTERNAL_STORAGE) -> {
-                    alerts.indefiniteSnackbar(
-                        binding.root,
-                        "El permiso de Galeria es necesario para usar esta actividad 😭"
-                    )
-                }
-
-                else -> {
-                    val permissions = arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                        permissions.plus(Manifest.permission.READ_MEDIA_IMAGES)
-                        permissions.plus(Manifest.permission.READ_MEDIA_VIDEO)
-                    }
-                    requestPermissions(permissions, PERM_GALERY_GROUP_CODE)
-                }
+            if (ContextCompat.checkSelfPermission(this, galleryPermission) == PackageManager.PERMISSION_GRANTED) {
+                canAccessGallery = true
+            } else {
+                // Request the permission
+                ActivityCompat.requestPermissions(this, arrayOf(galleryPermission), PERM_GALLERY_PICTURES)
             }
+
+            galleryPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                Manifest.permission.READ_MEDIA_VIDEO
+            else
+                Manifest.permission.READ_EXTERNAL_STORAGE
+
+            if (ContextCompat.checkSelfPermission(this, galleryPermission) == PackageManager.PERMISSION_GRANTED) {
+                canAccessGallery = true
+            } else {
+                // Request the permission
+                ActivityCompat.requestPermissions(this, arrayOf(galleryPermission), PERM_GALLERY_VIDEOS)
+
+            }
+
             if(canAccessGallery)
             {
                 val intentPick = Intent(Intent.ACTION_PICK)
-                intentPick.type = if (videoSwitch.isChecked) "video/*" else "image/*"
-                startActivityForResult(intentPick, REQUEST_PICK)
+                intentPick.type = if (isVideo) "video/*" else "image/*"
+                val code = if(isVideo)  REQUEST_VIDEO_FROM_GALLERY else REQUEST_PICTURE_FROM_GALLERY
+                startActivityForResult(intentPick, code)
             }
         }
     }
@@ -114,17 +121,33 @@ class CameraActivity : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (resultCode == RESULT_OK) {
-            if (requestCode == REQUEST_IMAGE_CAPTURE) {
-                val imageBitmap = data?.extras?.get("data") as Bitmap
-                picture.setImageBitmap(imageBitmap)
-                picture.visibility = android.view.View.VISIBLE
-                video.visibility = android.view.View.GONE
-            } else if (requestCode == REQUEST_VIDEO_CAPTURE) {
-                val videoUri = data?.data
-                video.setVideoURI(videoUri)
-                video.visibility = android.view.View.VISIBLE
-                picture.visibility = android.view.View.GONE
-                video.start()
+            when (requestCode) {
+                REQUEST_IMAGE_CAPTURE -> {
+                    val imageBitmap = data?.extras?.get("data") as Bitmap
+                    picture.setImageBitmap(imageBitmap)
+                    picture.visibility = android.view.View.VISIBLE
+                    video.visibility = android.view.View.GONE
+                }
+                REQUEST_VIDEO_CAPTURE -> {
+                    val videoUri = data?.data
+                    video.setVideoURI(videoUri)
+                    video.visibility = android.view.View.VISIBLE
+                    picture.visibility = android.view.View.GONE
+                    video.start()
+                }
+                REQUEST_PICTURE_FROM_GALLERY -> {
+                    val imageUri = data?.data
+                    picture.setImageURI(imageUri)
+                    picture.visibility = android.view.View.VISIBLE
+                    video.visibility = android.view.View.GONE
+                }
+                REQUEST_VIDEO_FROM_GALLERY -> {
+                    val videoUri = data?.data
+                    video.setVideoURI(videoUri)
+                    video.visibility = android.view.View.VISIBLE
+                    picture.visibility = android.view.View.GONE
+                    video.start()
+                }
             }
         }
     }
