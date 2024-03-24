@@ -1,48 +1,83 @@
 package com.example.taller2compumovil
 
-import androidx.appcompat.app.AppCompatActivity
+import android.content.pm.PackageManager
 import android.os.Bundle
-
+import android.widget.FrameLayout
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
+import android.Manifest
+import android.location.Location
+import android.os.Looper
+import android.widget.Toast
+import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
-import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
-import com.example.taller2compumovil.databinding.MapActivityBinding
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.SupportMapFragment
 
-class MapActivity : AppCompatActivity(), OnMapReadyCallback {
+class MapActivity : FragmentActivity(), OnMapReadyCallback {
 
     private lateinit var mMap: GoogleMap
-    private lateinit var binding: MapActivityBinding
-
+    private lateinit var map: FrameLayout
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var locationRequest: LocationRequest
+    private lateinit var locationCallback: LocationCallback
+    private lateinit var alerts :Alerts
+    private var currentLoc: Location = Location("default").apply {
+        latitude = 0.0
+        longitude = 0.0
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.map_activity)
+        map = findViewById(R.id.map)
+        Toast.makeText(this, "Remember to turn on your device's location for this functionality to work :)", Toast.LENGTH_LONG).show()
+        var mapFragment : SupportMapFragment
+        mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        binding = MapActivityBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        locationRequest = LocationRequest.create().apply {
+            interval = 5000
+            fastestInterval = 2000
+            priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+        }
 
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        val mapFragment = supportFragmentManager
-            .findFragmentById(R.id.map) as SupportMapFragment
+        locationCallback = object : LocationCallback() {
+            override fun onLocationResult(p0: LocationResult) {
+                p0?.lastLocation?.let { loc ->
+                    currentLoc = loc
+                    if (::mMap.isInitialized) {
+                        updateMap()
+                    }
+                }
+            }
+        }
+        startLocationUpdates()
         mapFragment.getMapAsync(this)
-    }
 
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
+    }
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
-
-        // Add a marker in Sydney and move the camera
-        val sydney = LatLng(-34.0, 151.0)
-        mMap.addMarker(MarkerOptions().position(sydney).title("Marker in Sydney"))
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney))
+        if (currentLoc != null) {
+            updateMap()
+        }
     }
+
+    private fun updateMap() {
+        mMap.clear()
+        val currentPos = LatLng(currentLoc!!.latitude, currentLoc!!.longitude)
+        mMap.addMarker(MarkerOptions().position(currentPos).title("Current Location"))
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(currentPos))
+    }
+    private fun startLocationUpdates() {
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
+            fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
+    }
+
 }

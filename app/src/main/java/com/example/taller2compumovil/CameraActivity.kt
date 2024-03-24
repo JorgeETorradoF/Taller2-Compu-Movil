@@ -52,7 +52,7 @@ class CameraActivity : AppCompatActivity() {
                 shouldShowRequestPermissionRationale(Manifest.permission.CAMERA) -> {
                     alerts.indefiniteSnackbar(
                         binding.root,
-                        "El permiso de Camara es necesario para usar esta actividad 😭"
+                        "Camera permission is required to access this functionality 😭"
                     )
                 }
 
