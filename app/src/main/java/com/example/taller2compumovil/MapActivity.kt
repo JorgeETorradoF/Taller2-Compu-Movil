@@ -2,7 +2,9 @@ package com.example.taller2compumovil
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Color
-import android.location.Location
+import android.location.Address
+import android.location.Geocoder
+import androidx.appcompat.widget.SearchView
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -19,6 +21,7 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.PolylineOptions
+import java.io.IOException
 
 class MapActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -38,6 +41,36 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
+        val mapSearch = findViewById<SearchView>(R.id.mapSearch)
+        mapSearch.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String): Boolean {
+                val location = mapSearch.query.toString()
+                var addressList: List<Address>? = null
+
+                if (location.isNotEmpty()) {
+                    val geocoder = Geocoder(this@MapActivity)
+                    try {
+                        addressList = geocoder.getFromLocationName(location, 1)
+                    } catch (e: IOException) {
+                        e.printStackTrace()
+                    }
+
+                    if (addressList != null && addressList.isNotEmpty()) {
+                        mMap.clear()
+                        val address = addressList[0]
+                        val latLng = LatLng(address.latitude, address.longitude)
+                        mMap.addMarker(MarkerOptions().position(latLng).title(location))
+                        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15.0f))
+                    }
+                }
+
+                return false
+            }
+
+            override fun onQueryTextChange(newText: String): Boolean {
+                return false
+            }
+        })
         mapFragment.getMapAsync(this)
     }
 
@@ -58,13 +91,13 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         }
         mMap.isMyLocationEnabled = true
 
-        polylineOptions = PolylineOptions().width(5f).color(Color.BLUE)
+        polylineOptions = PolylineOptions().width(7f).color(Color.BLUE)
 
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(p0: LocationResult) {
                 p0 ?: return
                 for (location in p0.locations) {
-                    addMarker(LatLng(location.latitude, location.longitude))
+                    updateMap(LatLng(location.latitude, location.longitude))
                 }
             }
         }
@@ -72,10 +105,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         startLocationUpdates()
     }
 
-    private fun addMarker(latLng: LatLng) {
-        mMap.clear()
-        mMap.addMarker(MarkerOptions().position(latLng).title("Current Position"))
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 20f))
+    private fun updateMap(latLng: LatLng) {
+        if (findViewById<SearchView>(R.id.mapSearch).query.isNullOrEmpty())
+        {
+            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 20f))
+        }
         polylineOptions.add(latLng)
         mMap.addPolyline(polylineOptions)
     }
@@ -83,7 +117,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun startLocationUpdates() {
         val locationRequest = LocationRequest.create().apply {
             interval = 5000
-            fastestInterval = 1000
+            fastestInterval = 2000
             priority = LocationRequest.PRIORITY_HIGH_ACCURACY
         }
 
